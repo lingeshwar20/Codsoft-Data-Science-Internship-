@@ -1,0 +1,101 @@
+#Credit Card Fraud Prediction Model Code 
+
+import pandas as pd
+import numpy as np
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import StandardScaler
+from sklearn.linear_model import LogisticRegression
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, confusion_matrix
+from imblearn.over_sampling import SMOTE
+import joblib
+
+
+data = pd.read_csv('/content/creditcard.csv')  
+
+
+X = data.drop('Class', axis=1)
+y = data['Class']
+
+
+y = pd.to_numeric(y, errors='coerce')
+
+
+X = X[~y.isna()]  
+y = y[~y.isna()]  
+
+
+print(y.value_counts())
+sm = SMOTE(random_state=42)
+X_res, y_res = sm.fit_resample(X, y)
+scaler = StandardScaler()
+X_res = scaler.fit_transform(X_res)
+
+X_train, X_test, y_train, y_test = train_test_split(X_res, y_res, test_size=0.2, random_state=42)
+model = LogisticRegression()
+model.fit(X_train, y_train)
+y_pred = model.predict(X_test)
+accuracy = accuracy_score(y_test, y_pred)
+precision = precision_score(y_test, y_pred)
+recall = recall_score(y_test, y_pred)
+f1 = f1_score(y_test, y_pred)
+confusion_matrix = confusion_matrix(y_test, y_pred)
+
+print("Accuracy:", accuracy)
+print("Precision:", precision)
+print("Recall:", recall)
+print("F1-score:", f1)
+print("Confusion Matrix:\n", confusion_matrix)
+
+
+joblib.dump(model, 'credit_card_fraud_detection_model.joblib')
+
+#Prediction Code 
+
+import pandas as pd
+import joblib
+import numpy as np
+
+
+model = joblib.load('/content/credit_card_fraud_detection_model.joblib')
+new_transaction = pd.DataFrame({
+    'Time': [123456],
+    'V1': [-0.64427],
+    'V2': [1.417964],
+    'V3':[1.07438],
+    'V4':[0.4922],
+    'V5':[0.948934],
+    'V6':[0.428118],
+    'V7':[1.120631],
+    'V8':[-3.80786],
+    'V9':[0.615375],
+    'V10':[1.249376],
+    'V11':[-0.61947],
+    'V12':[0.291474],
+    'V13':[1.757964],
+    'V14':[-1.32387],
+    'V15':[0.686133],
+    'V16':[-0.07613],
+    'V17':[-1.22213],
+    'V18':[-0.35822],
+    'V19':[0.324505],
+    'V20':[-0.15674],
+    'V21':[1.943465],
+    'V22':[-1.01545],
+    'V23':[0.057504],
+    'V24':[-0.64971],
+    'V25':[-0.41527],
+    'V26':[-0.05163],
+    'V27':[-1.20692],
+    'V28':[-1.08534],
+    'Amount': [40.8]
+})
+
+
+new_transaction_scaled = scaler.transform(new_transaction)  
+prediction = model.predict(new_transaction_scaled)
+
+if prediction == 1:
+    print("Fraudulent transaction")
+else:
+    print("Legitimate transaction")
