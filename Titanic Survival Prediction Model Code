@@ -1,0 +1,106 @@
+#Model Creation 
+import pandas as pd
+import numpy as np
+import joblib
+from sklearn.preprocessing import LabelEncoder, StandardScaler
+from sklearn.model_selection import train_test_split
+from sklearn.ensemble import RandomForestClassifier  
+from sklearn.metrics import accuracy_score, classification_report
+
+
+titanic_data = pd.read_csv("/content/Titanic-Dataset.csv")
+
+titanic_data['Age'].fillna(titanic_data['Age'].median(), inplace=True)
+titanic_data['Embarked'].fillna(titanic_data['Embarked'].mode()[0], inplace=True)
+titanic_data['FamilySize'] = titanic_data['SibSp'] + titanic_data['Parch'] + 1
+titanic_data['IsAlone'] = 0
+titanic_data.loc[titanic_data['FamilySize'] == 1, 'IsAlone'] = 1
+
+
+le = LabelEncoder()
+titanic_data['Sex'] = le.fit_transform(titanic_data['Sex'])
+titanic_data['Embarked'] = le.fit_transform(titanic_data['Embarked'])
+
+
+features = ['Pclass', 'Sex', 'Age', 'SibSp', 'Parch', 'Fare', 'Embarked', 'FamilySize', 'IsAlone']
+X = titanic_data[features]
+y = titanic_data['Survived']
+
+
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+
+
+scaler = StandardScaler()
+X_train = scaler.fit_transform(X_train)
+X_test = scaler.transform(X_test)
+
+
+model = RandomForestClassifier()  
+model.fit(X_train, y_train)
+
+
+y_pred = model.predict(X_test)
+
+
+print("Accuracy:", accuracy_score(y_test, y_pred))
+print(classification_report(y_test, y_pred))
+
+
+joblib.dump(model, 'titanic_prediction_model.pkl')
+joblib.dump(scaler, 'scaler.pkl')
+
+#Model Prediction 
+
+import pandas as pd
+import numpy as np
+import joblib
+from sklearn.preprocessing import LabelEncoder, StandardScaler
+
+
+loaded_model = joblib.load('/content/titanic_prediction_model.pkl')
+scaler = joblib.load('/content/scaler.pkl')
+
+
+def preprocess_passenger(passenger_data):
+    
+    passenger_df = pd.DataFrame(passenger_data, index=[0])
+
+    passenger_df['FamilySize'] = passenger_df['SibSp'] + passenger_df['Parch'] + 1
+    passenger_df['IsAlone'] = 0
+    passenger_df.loc[passenger_df['FamilySize'] == 1, 'IsAlone'] = 1
+
+ 
+    le = LabelEncoder()
+    passenger_df['Sex'] = le.fit_transform(passenger_df['Sex'])
+    passenger_df['Embarked'] = le.fit_transform(passenger_df['Embarked'])
+
+    
+    features = ['Pclass', 'Sex', 'Age', 'SibSp', 'Parch', 'Fare', 'Embarked', 'FamilySize', 'IsAlone']
+    passenger_data = passenger_df[features]
+
+  
+    passenger_data = scaler.transform(passenger_data)
+
+    return passenger_data
+
+
+new_passenger = {
+    'Pclass': 3,
+    'Sex': 'male',
+    'Age': 22,
+    'SibSp': 1,
+    'Parch': 0,
+    'Fare': 7.25,
+    'Embarked': 'S'
+}
+
+
+preprocessed_data = preprocess_passenger(new_passenger)
+
+
+prediction = loaded_model.predict(preprocessed_data)
+
+if prediction == 1:
+    print("Passenger is predicted to survive.")
+else:
+    print("Passenger is predicted to not survive.")
